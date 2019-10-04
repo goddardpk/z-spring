@@ -1,0 +1,42 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <properties>
+        <maven.version>3.5.0</maven.version>
+        <z.proto.implementation.version>1.0-SNAPSHOT</z.proto.implementation.version>
+    </properties>
+
+ <!--    <parent>
+        <groupId>com.zafin.zplatform</groupId>
+        <artifactId>z-proto</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>..</relativePath>
+    </parent> -->
+    <groupId>com.zafin.zplatform</groupId>
+    <artifactId>z-spring</artifactId>
+    <name>z-spring</name>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>z-spring-core</module>
+        <module>z-spring-revisions</module>
+    </modules>
+
+    <dependencies>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
