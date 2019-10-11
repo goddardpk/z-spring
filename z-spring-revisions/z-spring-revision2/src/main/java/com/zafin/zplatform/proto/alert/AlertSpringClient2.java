@@ -4,26 +4,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
+import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 
-import com.zafin.zplatform.proto.Builder;
-import com.zafin.zplatform.proto.BuilderServiceException;
+import com.zafin.models.avro2.Alert;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
+import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.service.AlertService;
 
-public class AlertSpringClient2<T, B> extends ClientBase<T, B> {
+public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
     
-    @Qualifier("testPayLoad")
+    @Qualifier("testPayLoad2")
     @Autowired
     private PayLoad testPayLoad;
 
-    //@Autowired
-    private AlertService<T, B> alertService;
-
     @Autowired
-    private Builder<T, B> builder;
+    @Qualifier("alertService")
+    private AlertService<Alert,Alert.Builder> alertService;
 
     public AlertSpringClient2() {
         System.out.println("Running [" + getClass().getSimpleName() + "]...");
@@ -34,11 +35,19 @@ public class AlertSpringClient2<T, B> extends ClientBase<T, B> {
     }
 
     @Override
-    public T create(PayLoad payload) throws BuilderServiceException {
-        return alertService.build(payload, builder);
+    public Alert create(PayLoad payload) throws BuilderServiceException {
+        Alert.Builder builder = alertService.seedOldBuilderFirst(payload);
+        return builder.build();
     }
+    
     @SpringBootApplication
     public static class TestSpring2 {
+        
+        @Bean 
+        ServletWebServerFactory servletWebServerFactory(){
+            return new JettyServletWebServerFactory();
+        }
+        
         public static void main(String[] args) throws Exception {
             String[] testArgs = {"foo"};
             Class<?> wtf = TestSpring2.class;
@@ -48,7 +57,6 @@ public class AlertSpringClient2<T, B> extends ClientBase<T, B> {
         }
     }
     
-    
     public static void test(ApplicationContext context) throws BuilderServiceException, ClassNotFoundException {
         Client<?,?> client =  null;
         client = (Client<?,?>)context.getBean("alertClient");
@@ -57,7 +65,7 @@ public class AlertSpringClient2<T, B> extends ClientBase<T, B> {
 
     public void test() {
         try {
-            T alert = create(testPayLoad);
+            Alert alert = create(testPayLoad);
             System.out.println("Alert created: " + alert);
         } catch (BuilderServiceException e) {
             throw new IllegalStateException("Unable to build alert", e);

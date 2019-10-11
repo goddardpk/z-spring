@@ -5,14 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
+import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Bean;
 
-import com.zafin.zplatform.proto.Builder;
-import com.zafin.zplatform.proto.BuilderServiceException;
+import com.zafin.models.avro1.Alert;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
+import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.service.AlertService;
 
 /**
@@ -24,9 +26,9 @@ import com.zafin.zplatform.proto.service.AlertService;
  * @param <B>
  */
 //@SpringBootApplication
-public class AlertSpringClient1<T,B> extends ClientBase<T,B> {
+public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
     
-    @Qualifier("testPayLoad")
+    @Qualifier("testPayLoad1")
     @Autowired
     private PayLoad testPayLoad;
 
@@ -35,14 +37,17 @@ public class AlertSpringClient1<T,B> extends ClientBase<T,B> {
     }
     
     @Autowired
-    private AlertService<T,B> alertService;
-    
-    @Autowired
-    private Builder<T,B> builder;
+    @Qualifier("alsertService")
+    private AlertService<Alert,Alert.Builder> alertService;
     
     @SpringBootApplication
-    //@Import({AlertSpringConfig1.class})
     public static class TestSpring1 {
+        
+        @Bean 
+        ServletWebServerFactory servletWebServerFactory(){
+            return new JettyServletWebServerFactory();
+        }
+        
         public static void main(String[] args) throws ClassNotFoundException, BuilderServiceException {
             String[] testArgs = {"foo"};
             System.out.println(TestSpring1.class.getSimpleName() + ": " + AlertSpringConfig1.class.getSimpleName());
@@ -57,15 +62,16 @@ public class AlertSpringClient1<T,B> extends ClientBase<T,B> {
         client.test();
     }
 
-    public T create(PayLoad payload) throws BuilderServiceException {
-        return alertService.build(payload, builder);
+    public Alert create(PayLoad payload) throws BuilderServiceException {
+        Alert.Builder builder =  alertService.seedOldBuilderFirst(payload);
+        return builder.build();
     }
     
 
     @Override
     public void test() {
         try {
-            T alert = create(testPayLoad);
+            Alert alert = create(testPayLoad);
             System.out.println("Alert created: " + alert);
         } catch (BuilderServiceException e) {
             throw new IllegalStateException("Unable to create Alert using test payload: [" + testPayLoad + "].",e);

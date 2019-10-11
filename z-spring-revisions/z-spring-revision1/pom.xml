@@ -16,7 +16,17 @@
     <dependencies>
         <dependency>
             <groupId>com.zafin.zplatform</groupId>
+            <artifactId>z-extract</artifactId>
+            <version>${z.proto.implementation.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zafin.zplatform</groupId>
             <artifactId>z-spring-core</artifactId>
+            <version>${z.proto.implementation.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zafin.zplatform</groupId>
+            <artifactId>z-extract</artifactId>
             <version>${z.proto.implementation.version}</version>
         </dependency>
         <dependency>
@@ -28,6 +38,20 @@
              <groupId>com.zafin.zplatform</groupId>
              <artifactId>z-proto-zrpe1-source</artifactId>
              <version>${z.proto.implementation.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jetty</artifactId>
         </dependency>
     </dependencies>
 

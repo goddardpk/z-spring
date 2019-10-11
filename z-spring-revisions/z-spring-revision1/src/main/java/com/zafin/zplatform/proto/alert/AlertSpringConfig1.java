@@ -3,26 +3,36 @@ package com.zafin.zplatform.proto.alert;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter;
 
 import com.zafin.models.avro1.Alert;
-import com.zafin.zplatform.proto.Builder;
-import com.zafin.zplatform.proto.BuilderBase;
-import com.zafin.zplatform.proto.BuilderPopulator;
 import com.zafin.zplatform.proto.ConfigurationProperties;
 import com.zafin.zplatform.proto.PayLoad;
-import com.zafin.zplatform.proto.PayLoadFactory;
 import com.zafin.zplatform.proto.ServiceRegistry;
 import com.zafin.zplatform.proto.SpringServiceRegistryEntry;
+import com.zafin.zplatform.proto.exception.BuilderServiceException;
+import com.zafin.zplatform.proto.factory.PayLoadFactory;
+import com.zafin.zplatform.proto.factory.ProtoFactory;
 import com.zafin.zplatform.proto.service.AlertService;
+import com.zafin.zplatform.proto.service.RemoteBuilderService;
 import com.zafin.zplatform.proto.service.StartupArgs;
 
-//@Configuration
-//@ComponentScan
-//@EnableAutoConfiguration
-public class AlertSpringConfig1<T, B> {
-    private final Map<Object,ServiceRegistry<T,B>> allRegisteredServices = new HashMap<>();
+@Configuration
+@ComponentScan
+@EnableAutoConfiguration
+public class AlertSpringConfig1 {
+	
+    private final Map<Object,ServiceRegistry<Alert,Alert.Builder>> allRegisteredServices = new HashMap<>();
+    
+    @Autowired
+    @Qualifier("protoFactory1")
+    private ProtoFactory<Alert,Alert.Builder> protofactory;
     
     public static StartupArgs STARTUP_ARGS = null;
     private static final String ALERT_SERVICE = "AlertService";
@@ -34,10 +44,10 @@ public class AlertSpringConfig1<T, B> {
     }
     
     @Bean
-    ServiceRegistry<T,B> serviceRegistry() throws ClassNotFoundException {
+    ServiceRegistry<Alert,Alert.Builder> serviceRegistry() {
         System.out.println("Calling " + getClass().getSimpleName() + ".serviceRegistry()...");
         @SuppressWarnings("unchecked")
-        SpringServiceRegistryEntry<T,B> registry = SpringServiceRegistryEntry.builder()
+        SpringServiceRegistryEntry<Alert,Alert.Builder> registry = SpringServiceRegistryEntry.builder()
                 .setSpringConfig(AlertSpringConfig1.class.getCanonicalName())
                 .setArgs(STARTUP_ARGS)
                 .build();
@@ -45,65 +55,44 @@ public class AlertSpringConfig1<T, B> {
         return registry;
     }
     
-    @Bean
-    Builder<T,B> builder() {
-       return  new BuilderBase<T,B>(new AlertBuilderPopulator1<T,B>()) {
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public B createNewNativeBuilder() {
-                return builder = (B)Alert.newBuilder();
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public T build() {
-                return (T) ((Alert.Builder) builder).build();
-            }
-        };
-    }
-
-    @Bean
-    BuilderPopulator<T, B> builderPopulator() {
-        if (config.getProtocolRevision() == 1) {
-            return new AlertBuilderPopulator1<>();
-        }
-        throw new IllegalStateException(
-                "Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
-    }
-
     @Bean(name = "/" + ALERT_SERVICE)
-    AlertService<T, B> alertService() {
+    @Qualifier("alertService")
+    RemoteBuilderService<Alert,Alert.Builder> alertService() throws BuilderServiceException {
         System.out.println("Spring Creating: " + HttpInvokerServiceExporter.class.getCanonicalName());
         HttpInvokerServiceExporter exporter = new HttpInvokerServiceExporter();
-        AlertService<T, B> alertService1 = new AlertServiceBase<>();
+        RemoteBuilderService<Alert,Alert.Builder> alertService1 = protofactory.createService(Alert.class);
         exporter.setService(alertService1);
         exporter.setServiceInterface(AlertService.class);
         return alertService1;
     }
 
     @Bean(name = "alertClient")
-    AlertSpringClient1<T, B> proxy() {
+    AlertSpringClient1 proxy() {
         if (config.getProtocolRevision() == 1) {
-            return new AlertSpringClient1<>();
+            return new AlertSpringClient1();
         }
         throw new IllegalStateException(
                 "Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
     }
+    
+    @Bean(name="protoFactory1")
+    ProtoFactory<Alert,Alert.Builder> protoFactory() {
+        return new AlertProtoFactory<>();
+    }
 
-    @Bean(name = "testPayLoad")
-    PayLoad testPayLoad() {
+    @Bean(name = "testPayLoad1")
+    PayLoad testPayLoad() throws BuilderServiceException {
         if (config.getProtocolRevision() == 1) {
-            return new AlertTestPayLoad1();
+            return new AlertTestPayLoad1<Alert>();
         }
         throw new IllegalStateException(
                 "Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
     }
 
     @Bean
-    PayLoadFactory payLoadFactory() {
+    PayLoadFactory<Alert> payLoadFactory() throws BuilderServiceException {
         if (config.getProtocolRevision() == 1) {
-            return new AlertPayLoadFactory1();
+            return new AlertPayLoadFactory1<>();
         }
         throw new IllegalStateException(
                 "Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
