@@ -2,24 +2,21 @@ package com.zafin.zplatform.proto;
 
 import static com.zafin.zplatform.proto.RevisionUtil.getRevisionFromClassName;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
+import com.zafin.zplatform.proto.service.RemoteBuilderService;
 import com.zafin.zplatform.proto.service.RevisableBuilderService;
 
 public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderService<T,B> {
-    /**
-     * There is a tight coupling in RPC (client know the interface it supports).
-     * Ergo this service must comply with this client's service interface.
-     */
     
     @Autowired
     private BuilderPopulator<T,B> builderPopulator;
 
     private RevisableBuilderService<T,B> previousCompatibleBuilderService;
-    
     
     @Override
     public boolean isSubRevision(int revision) {
@@ -51,23 +48,70 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
     }
 
     @Override
-    public B seedOldBuilderFirst(PayLoad payload) throws BuilderServiceException {
-        return builderPopulator.seedOldBuilderFirst(payload);
-    }
-
-    @Override
     public BuilderPopulator<T, B> getBuilderPopulator() {
         return builderPopulator;
     }
 
 	@Override
-	public T build(B builder) throws BuilderServiceException {
-		return null;
+	public int getRevision() {
+		return RevisionUtil.getRevisionFromClassName(getClass().getSimpleName());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public RemoteBuilderService<T, B> setup(RemoteBuilderService<?, ?> remoteBuilderService) {
+		return (RemoteBuilderService<T, B>) remoteBuilderService.setup(remoteBuilderService);
 	}
 
 	@Override
-	public int getRevision() {
-		return RevisionUtil.getRevisionFromClassName(getClass().getSimpleName());
+	public List<?> seedOldBuilderFirst(PayLoad payload) throws BuilderServiceException {
+		return builderPopulator.seedOldBuilderFirst(payload);
+	}
+
+	@Override
+	public void setPreviousPopulator(BuilderPopulator<?, ?> previous) {
+		builderPopulator.setPreviousPopulator(previous);
+		
+	}
+
+	@Override
+	public BuilderPopulator<?, ?> getPreviousPopulator() {
+		return previousCompatibleBuilderService;
+	}
+
+	@Override
+	public B getCurrentBuilder() {
+		return builderPopulator.getCurrentBuilder();
+	}
+
+	@Override
+	public void setCurrentBuilder(B builder) {
+		builderPopulator.setCurrentBuilder(builder);
+	}
+
+	@Override
+	public TransferState<?, ?> getTransferState() {
+		return builderPopulator.getTransferState();
+	}
+
+	@Override
+	public PayLoad loadTestPayLoad(PayLoad payload) {
+		return builderPopulator.loadTestPayLoad(payload);
+	}
+
+	@Override
+	public T build(Object builder) throws BuilderServiceException {
+		throw new IllegalStateException("Not implemented");
+	}
+
+	@Override
+	public boolean transferStateForward() throws BuilderServiceException {
+		return builderPopulator.transferStateForward();
+	}
+
+	@Override
+	public PayLoad createPayloadFrom(Object genericFrameworkRecord) throws BuilderServiceException {
+		return builderPopulator.createPayloadFrom(genericFrameworkRecord);
 	}
     
 }

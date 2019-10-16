@@ -28,7 +28,8 @@ public abstract class AlertHttpClientSpringBase<T,B>
         return DEFAULT_LOCAL_URL;
     }
     
-    public AlertHttpClientSpringBase(Class<?> interfaceClazz, String url) {
+    public AlertHttpClientSpringBase(Class<?> interfaceClazz, String url,Class<T> classOfObject, Class<B> classOfBuilder) {
+    	super(classOfObject,classOfBuilder);
         if (interfaceClazz == null) {
             System.out.println(this.getClass().getSimpleName() + ": Using default interface: [" + DEFAULT_INTERFACE.getSimpleName() + "].");
             interfaceClazz = DEFAULT_INTERFACE;
@@ -36,5 +37,4 @@ public abstract class AlertHttpClientSpringBase<T,B>
         setServiceUrl(getAlertUrl());
         setServiceInterface(interfaceClazz);
     }
-
 }

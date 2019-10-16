@@ -1,29 +1,27 @@
 package com.zafin.zplatform.proto.alert;
 
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
-import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-
 import com.zafin.models.avro1.Alert;
+import com.zafin.models.avro1.Alert.Builder;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
-import com.zafin.zplatform.proto.service.AlertService;
 
 /**
  * This is a Spring implementation of calling a 'build' service.
  * 
  * @author Paul Goddard
  *
- * @param <T>
- * @param <B>
+ * @param <T> Type that is to be built
+ * @param <B> Builder that will produce type <T>
  */
 //@SpringBootApplication
 public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
@@ -33,23 +31,19 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
     private PayLoad testPayLoad;
 
     public AlertSpringClient1() {
+    	super(Alert.class,Alert.Builder.class);
         System.out.println("Running [" + getClass().getSimpleName() + "]...");
     }
     
     @Autowired
-    @Qualifier("alsertService")
-    private AlertService<Alert,Alert.Builder> alertService;
+    @Qualifier(AlertSpringConfig1.ALERT_SERVICE)
+    private AlertService1 alertService1;
     
     @SpringBootApplication
     public static class TestSpring1 {
         
-        @Bean 
-        ServletWebServerFactory servletWebServerFactory(){
-            return new JettyServletWebServerFactory();
-        }
-        
         public static void main(String[] args) throws ClassNotFoundException, BuilderServiceException {
-            String[] testArgs = {"foo"};
+            String[] testArgs = {"spring.main.allow-bean-definition-overriding=true"};
             System.out.println(TestSpring1.class.getSimpleName() + ": " + AlertSpringConfig1.class.getSimpleName());
             ApplicationContext ctx = SpringApplication.run(AlertSpringConfig1.class, testArgs);
             AlertSpringClient1.test(ctx);
@@ -57,14 +51,18 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
     }
     
     public static void test(ApplicationContext context) throws BuilderServiceException, ClassNotFoundException {
-        Client<?,?> client =  null;
-        client = (Client<?,?>)context.getBean("alertClient");
+        @SuppressWarnings("unchecked")
+		Client<Alert,Alert.Builder> client = (Client<Alert,Alert.Builder>) context.getBean("alertClient1");
         client.test();
     }
 
     public Alert create(PayLoad payload) throws BuilderServiceException {
-        Alert.Builder builder =  alertService.seedOldBuilderFirst(payload);
-        return builder.build();
+        List<?> builders =  alertService1.seedOldBuilderFirst(payload);
+        Object o = null;
+        for(Object builder:builders) {
+        	o = alertService1.build(builder);
+        }
+        return (Alert)o;
     }
     
 
@@ -82,5 +80,10 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
     public Class<?> getSupportedClient() {
         return AlertSpringClient1.class;
     }
+
+	@Override
+	public Alert create(Builder builder) {
+		return builder.build();
+	}
 
 }

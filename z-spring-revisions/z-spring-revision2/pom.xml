@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>com.zafin.zplatform</groupId>
-            <artifactId>z-extract</artifactId>
+            <artifactId>z-extract-avro</artifactId>
             <version>${z.proto.implementation.version}</version>
         </dependency>
         <dependency>
@@ -32,6 +32,11 @@
         <dependency>
             <groupId>com.zafin.zplatform</groupId>
             <artifactId>z-spring-core</artifactId>
+            <version>${z.proto.implementation.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zafin.zplatform</groupId>
+            <artifactId>z-spring-revision1</artifactId>
             <version>${z.proto.implementation.version}</version>
         </dependency>
         <dependency>

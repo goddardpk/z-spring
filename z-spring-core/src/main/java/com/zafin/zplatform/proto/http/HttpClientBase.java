@@ -15,7 +15,12 @@ import com.zafin.zplatform.proto.ClientBase;
  */
 public abstract class HttpClientBase<T,B> extends ClientBase<T, B> {
     
-    protected String serviceUrl;
+    public HttpClientBase(Class<T> typeOfObject, Class<B> typeOfBuilder) {
+		super(typeOfObject, typeOfBuilder);
+		// TODO Auto-generated constructor stub
+	}
+
+	protected String serviceUrl;
    
     //Hide invocation mechanism from clients
     
