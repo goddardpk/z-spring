@@ -67,13 +67,9 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
     
 
     @Override
-    public void test() {
-        try {
-            Alert alert = create(testPayLoad);
-            System.out.println("Alert created: " + alert);
-        } catch (BuilderServiceException e) {
-            throw new IllegalStateException("Unable to create Alert using test payload: [" + testPayLoad + "].",e);
-        }
+    public void test() throws BuilderServiceException {
+        Alert alert = create(testPayLoad);
+        System.out.println("Alert created: " + alert);
     }
 
     @Override

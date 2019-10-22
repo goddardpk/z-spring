@@ -13,7 +13,6 @@ import com.zafin.models.avro2.Alert.Builder;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
-import com.zafin.zplatform.proto.RevisionUtil;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
 
 public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
@@ -61,18 +60,19 @@ public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
      * @author Paul.Goddard
      *
      */
-    @SpringBootApplication
-    public static class RegressionTestSpring2 {
-        
-        public static void main(String[] args) throws Exception {
-            
-            ApplicationContext ctx1 = SpringApplication.run(AlertSpringConfig1.class, args);
-            
-            ApplicationContext ctx2 = SpringApplication.run(AlertSpringConfig2.class, args);
-            
-            AlertSpringClient2.regresionTest(ctx2);
-        }
-    }
+	
+	@SpringBootApplication
+	public static class RegressionTestSpring2 {
+		public static void main(String[] args) throws Exception {
+
+			ApplicationContext ctx1 = SpringApplication.run(AlertSpringConfig1.class, args);
+
+			ApplicationContext ctx2 = SpringApplication.run(AlertSpringConfig2.class, args);
+
+			AlertSpringClient2.regressionTest(ctx2);
+		}
+	}
+	 
     
     /**
      * Wire together current client to its previous client revision
@@ -80,7 +80,7 @@ public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
      * @throws BuilderServiceException
      * @throws ClassNotFoundException
      */
-    public static void regresionTest(ApplicationContext context) throws BuilderServiceException, ClassNotFoundException {
+    public static void regressionTest(ApplicationContext context) throws BuilderServiceException, ClassNotFoundException {
         @SuppressWarnings("unchecked")
 		Client<Alert,Alert.Builder> client2 = 
 			(Client<Alert,Alert.Builder>) context.getBean("alertClient2");
@@ -94,13 +94,9 @@ public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
         client2.test();
     }
 
-    public void test() {
-        try {
-            Alert alert = create(testPayLoad2);
-            System.out.println("Alert created: " + alert);
-        } catch (BuilderServiceException e) {
-            throw new IllegalStateException("Unable to build alert", e);
-        }
+    public void test() throws BuilderServiceException {
+        Alert alert = create(testPayLoad2);
+        System.out.println("Alert created: " + alert);
     }
 
 	@Override

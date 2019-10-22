@@ -64,11 +64,6 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 	}
 
 	@Override
-	public List<?> seedOldBuilderFirst(PayLoad payload) throws BuilderServiceException {
-		return builderPopulator.seedOldBuilderFirst(payload);
-	}
-
-	@Override
 	public void setPreviousPopulator(BuilderPopulator<?, ?> previous) {
 		builderPopulator.setPreviousPopulator(previous);
 		
@@ -105,13 +100,49 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 	}
 
 	@Override
-	public boolean transferStateForward() throws BuilderServiceException {
-		return builderPopulator.transferStateForward();
+	public boolean transferStateForward(PayLoad payload) throws BuilderServiceException {
+		return builderPopulator.transferStateForward(payload);
 	}
 
 	@Override
-	public PayLoad createPayloadFrom(Object genericFrameworkRecord) throws BuilderServiceException {
-		return builderPopulator.createPayloadFrom(genericFrameworkRecord);
+	public boolean canConvert(Object object, Class<?> toType) {
+		return builderPopulator.canConvert(object, toType);
+	}
+
+	@Override
+	public Object convert(Object object, Class<?> toType) throws BuilderServiceException {
+		return builderPopulator.convert(object, toType);
+	}
+
+	@Override
+	public TypeConverter getTypeConverter() {
+		return builderPopulator.getTypeConverter();
+	}
+
+	@Override
+	public List<Class<?>> getSupportedTypes() throws BuilderServiceException {
+		return builderPopulator.getSupportedTypes();
+	}
+
+	@Override
+	public String getSupportedPackageName() throws BuilderServiceException {
+		return builderPopulator.getSupportedPackageName();
+	}
+
+	@Override
+	public List<?> seedOldBuilderFirst(PayLoad payload) throws BuilderServiceException {
+		return null;
+	}
+
+	@Override
+	public B seed(PayLoad payload, Object emptyCurrentBuilder, BuilderPopulator<?, ?> previousBuilder)
+			throws BuilderServiceException {
+		return builderPopulator.seed(payload, emptyCurrentBuilder, previousBuilder);
+	}
+	
+	@Override
+	public void setTransferState(TransferState<?,?> transferState) {
+		builderPopulator.setTransferState(transferState);
 	}
     
 }

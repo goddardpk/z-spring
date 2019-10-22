@@ -5,13 +5,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.boot.SpringApplication;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
 import org.springframework.boot.web.server.ConfigurableWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +34,8 @@ import com.zafin.zplatform.proto.RevisionUtil;
 import com.zafin.zplatform.proto.Schema;
 import com.zafin.zplatform.proto.ServiceRegistry;
 import com.zafin.zplatform.proto.SpringServiceRegistryEntry;
+import com.zafin.zplatform.proto.TransferAvroState;
+import com.zafin.zplatform.proto.TransferState;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.factory.PayLoadFactory;
 import com.zafin.zplatform.proto.factory.SchemaFactory;
@@ -48,9 +54,43 @@ public class AlertSpringConfig1 {
 
     private ConfigurationProperties config = new ConfigurationProperties(1);
     
+    public static ApplicationContext context;
+    
     public AlertSpringConfig1() {
         System.out.println("Starting [" + this.getClass().getCanonicalName() + "]...");
     }
+    
+    public ApplicationContext getContext(int revision) {
+    	int myRevision = RevisionUtil.getRevisionFromClassName(this.getClass().getSimpleName());
+    	if (revision > myRevision) {
+    		throw new IllegalArgumentException("Argument revision [" + revision + "] exceeds my revision [" + myRevision + "].");
+    	}
+    	if (revision == 1) {
+    		return AlertSpringConfig1.context;
+    	} else if (revision == 2) {
+    		return context;
+    	}
+    	throw new IllegalArgumentException("Unsupported revision: [" + revision + "].");
+    }
+    
+    BuilderPopulator<?,?> getBuilderPopulator(int revision) {
+    	if (revision < 1) return null;
+    	String beanName = "alertBuilderPopulator" + revision;
+    	BuilderPopulator<?,?> populator = (BuilderPopulator<?, ?>) getContext(revision).getBean(beanName);
+    	if (populator == null) {
+    		throw new IllegalStateException("No bean defined as: [" + beanName + "].");
+    	}
+    	populator.setPreviousPopulator(getBuilderPopulator(--revision));
+    	return populator;
+    }
+    
+    @Autowired
+    @Qualifier("alertBuilderPopulator1")
+    private BuilderPopulator<?,?> alertBuilderPopulator1;
+    
+    @Autowired
+    @Qualifier("transferState1")
+    private TransferState<?,?> transferState1;
     
     @Component
     public class ServerPortCustomizer 
@@ -64,11 +104,58 @@ public class AlertSpringConfig1 {
         	factory.setPort(port);
         }
     }
-//    
-//    @Bean(name="alertBuilderPopulator1")
-//    BuilderPopulator<Alert,Alert.Builder> alertBuilderPopulator1() throws BuilderServiceException {
-//    	return new AlertBuilderPopulator1<>();
-//    }
+    
+    @Component
+    public class ApplicationContextProvider implements ApplicationContextAware {
+
+        @Override
+        public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+            context = applicationContext;
+        } 
+
+        public ApplicationContext getContext() {
+            return context;
+        }
+
+    }
+    
+	@Bean(name = "transferState1")
+	TransferState<com.zafin.models.avro1.Alert.Builder, com.zafin.models.avro1.Alert.Builder> transferState() throws BuilderServiceException {
+		Class<com.zafin.models.avro1.Alert.Builder> newObject = com.zafin.models.avro1.Alert.Builder.class;
+		Class<com.zafin.models.avro1.Alert.Builder> previousObject = com.zafin.models.avro1.Alert.Builder.class; 
+		return new TransferAvroState<com.zafin.models.avro1.Alert.Builder, com.zafin.models.avro1.Alert.Builder>(
+				previousObject, newObject) {
+
+			@Override
+			public com.zafin.models.avro1.Alert.Builder populateAvroBuilder(GenericRecordBuilder genericRecordBuilder,
+					PayLoad payload) throws BuilderServiceException {
+				BuilderPopulator<?, ?> builderPop = getBuilderPopulator(1);
+				Object seededBuilder = builderPop.seed(payload, builderPop.getCurrentBuilder(),
+						builderPop.getPreviousPopulator());
+				return (com.zafin.models.avro1.Alert.Builder) seededBuilder;
+			}
+
+			@Override
+			public org.apache.avro.Schema getPreviousSchema() {
+				return com.zafin.models.avro1.Alert.getClassSchema();
+			}
+
+			@Override
+			public org.apache.avro.Schema getCurrentSchema() {
+				return com.zafin.models.avro1.Alert.getClassSchema();
+			}
+
+			@Override
+			public com.zafin.models.avro1.Alert.Builder convert(Builder arg0) {
+				throw new IllegalStateException("No implemented yet");
+			}
+		};
+	}
+    
+    @Bean(name="alertBuilderPopulator1")
+    BuilderPopulator<Alert,Alert.Builder> alertBuilderPopulator1() throws BuilderServiceException {
+    	return new AlertBuilderPopulator1<>();
+    }
     
     /**
      * TODO: The type of web container needs to be moved to a core web config and not specified in this 
@@ -83,7 +170,6 @@ public class AlertSpringConfig1 {
     @Bean
     SchemaFactory<Alert> schemaFactory() {
     	return new SchemaFactory<Alert>() {
-
 			@Override
 			public Schema createSchema(Alert alert, int revision) {
 				return new Schema() {
@@ -109,7 +195,6 @@ public class AlertSpringConfig1 {
 					public Class<Alert> getRegisteredClass() {
 						return (Class<Alert>) alert.getClass();
 					}
-					
 				};
 			}
     		
@@ -150,9 +235,12 @@ public class AlertSpringConfig1 {
 				}
 				return ((com.zafin.models.avro1.Alert.Builder) builder).build();
 			}
+			
         };
+        AlertBuilderPopulator1<Alert,Alert.Builder> abp1 = new AlertBuilderPopulator1<Alert,Alert.Builder>();
         alertService.setBuilderPopulator(new AlertBuilderPopulator1<Alert,Alert.Builder>());
         alertService.setBuilder(Alert.newBuilder());
+        abp1.setTransferState(transferState1);
         exporter.setService(alertService);
         exporter.setServiceInterface(AlertService.class);
         return alertService;
