@@ -13,6 +13,7 @@ import com.zafin.models.avro2.Alert.Builder;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
+import com.zafin.zplatform.proto.VersionedProtocolConfiguration;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
 
 public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
@@ -65,11 +66,11 @@ public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
 	public static class RegressionTestSpring2 {
 		public static void main(String[] args) throws Exception {
 
-			ApplicationContext ctx1 = SpringApplication.run(AlertSpringConfig1.class, args);
+			AlertSpringConfig1.context = SpringApplication.run(AlertSpringConfig1.class, args);
 
-			ApplicationContext ctx2 = SpringApplication.run(AlertSpringConfig2.class, args);
+			AlertSpringConfig2.context = SpringApplication.run(AlertSpringConfig2.class, args);
 
-			AlertSpringClient2.regressionTest(ctx2);
+			AlertSpringClient2.regressionTest(AlertSpringConfig2.context);
 		}
 	}
 	 
@@ -102,5 +103,10 @@ public class AlertSpringClient2 extends ClientBase<Alert, Alert.Builder> {
 	@Override
 	public Alert create(Builder builder) {
 		return builder.build();
+	}
+
+	@Override
+	public VersionedProtocolConfiguration getVersionedProtocolConfiguration() throws BuilderServiceException {
+		return AlertSpringConfig2.instance();
 	}
 }

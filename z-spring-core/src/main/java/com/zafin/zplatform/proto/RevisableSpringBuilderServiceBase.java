@@ -134,10 +134,11 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public B seed(PayLoad payload, Object emptyCurrentBuilder, BuilderPopulator<?, ?> previousBuilder)
+	public B seed(PayLoad payload)
 			throws BuilderServiceException {
-		return builderPopulator.seed(payload, emptyCurrentBuilder, previousBuilder);
+		return (B) builderPopulator.seed(payload);
 	}
 	
 	@Override

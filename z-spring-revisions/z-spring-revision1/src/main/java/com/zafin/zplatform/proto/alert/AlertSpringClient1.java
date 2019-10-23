@@ -13,6 +13,7 @@ import com.zafin.models.avro1.Alert.Builder;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
 import com.zafin.zplatform.proto.PayLoad;
+import com.zafin.zplatform.proto.VersionedProtocolConfiguration;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
 
 /**
@@ -80,6 +81,11 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder> {
 	@Override
 	public Alert create(Builder builder) {
 		return builder.build();
+	}
+
+	@Override
+	public VersionedProtocolConfiguration getVersionedProtocolConfiguration() throws BuilderServiceException {
+		return AlertSpringConfig1.instance();
 	}
 
 }

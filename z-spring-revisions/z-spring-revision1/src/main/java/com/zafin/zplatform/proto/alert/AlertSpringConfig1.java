@@ -1,5 +1,6 @@
 package com.zafin.zplatform.proto.alert;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
 import org.springframework.boot.web.server.ConfigurableWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -19,6 +21,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.EventListener;
 import org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +40,7 @@ import com.zafin.zplatform.proto.ServiceRegistry;
 import com.zafin.zplatform.proto.SpringServiceRegistryEntry;
 import com.zafin.zplatform.proto.TransferAvroState;
 import com.zafin.zplatform.proto.TransferState;
+import com.zafin.zplatform.proto.VersionedProtocolConfiguration;
 import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.factory.PayLoadFactory;
 import com.zafin.zplatform.proto.factory.SchemaFactory;
@@ -45,7 +50,7 @@ import com.zafin.zplatform.proto.service.StartupArgs;
 @Configuration
 @ComponentScan
 @EnableAutoConfiguration
-public class AlertSpringConfig1 {
+public class AlertSpringConfig1 implements VersionedProtocolConfiguration {
 	
     private final Map<Object,ServiceRegistry<Alert,Alert.Builder>> allRegisteredServices = new HashMap<>();
     
@@ -56,12 +61,28 @@ public class AlertSpringConfig1 {
     
     public static ApplicationContext context;
     
+    private static VersionedProtocolConfiguration INSTANCE;
+    
+    private boolean validated = false;
+    
+    @Autowired
+    private com.zafin.zplatform.proto.Builder<Alert,Alert.Builder> alertService1;
+    
+    @Autowired
+    private Client<Alert,Alert.Builder> alertClient1;
+    
+    public static VersionedProtocolConfiguration instance() {
+    	if (INSTANCE == null) throw new IllegalStateException("Instance not created.");
+    	return INSTANCE;
+    }
+    
     public AlertSpringConfig1() {
         System.out.println("Starting [" + this.getClass().getCanonicalName() + "]...");
+        INSTANCE = this;
     }
     
     public ApplicationContext getContext(int revision) {
-    	int myRevision = RevisionUtil.getRevisionFromClassName(this.getClass().getSimpleName());
+    	int myRevision = RevisionUtil.getRevisionFromClassName(AlertSpringConfig1.class.getSimpleName());
     	if (revision > myRevision) {
     		throw new IllegalArgumentException("Argument revision [" + revision + "] exceeds my revision [" + myRevision + "].");
     	}
@@ -86,11 +107,15 @@ public class AlertSpringConfig1 {
     
     @Autowired
     @Qualifier("alertBuilderPopulator1")
-    private BuilderPopulator<?,?> alertBuilderPopulator1;
+    private BuilderPopulator<Alert,Alert.Builder> alertBuilderPopulator1;
     
     @Autowired
     @Qualifier("transferState1")
     private TransferState<?,?> transferState1;
+    
+    @Autowired
+    @Qualifier("payloadFactory1")
+    private PayLoadFactory<Alert> payloadFactory1;
     
     @Component
     public class ServerPortCustomizer 
@@ -116,23 +141,26 @@ public class AlertSpringConfig1 {
         public ApplicationContext getContext() {
             return context;
         }
-
     }
     
-	@Bean(name = "transferState1")
-	TransferState<com.zafin.models.avro1.Alert.Builder, com.zafin.models.avro1.Alert.Builder> transferState() throws BuilderServiceException {
-		Class<com.zafin.models.avro1.Alert.Builder> newObject = com.zafin.models.avro1.Alert.Builder.class;
-		Class<com.zafin.models.avro1.Alert.Builder> previousObject = com.zafin.models.avro1.Alert.Builder.class; 
+    @Bean(name="payloadFactory1")
+    PayLoadFactory<?> payloadFactory1() throws BuilderServiceException {
+    	return new AvroAlertPayLoadFactory1<Alert>();
+    }
+    
+	@Bean(name="transferState1")
+	//@DependsOn({"payloadFactory1"})
+	TransferState<?,?> transferState1() throws BuilderServiceException {
+		Class<com.zafin.models.avro1.Alert.Builder> targetType = com.zafin.models.avro1.Alert.Builder.class;
+		Class<com.zafin.models.avro1.Alert.Builder> sourceType = com.zafin.models.avro1.Alert.Builder.class; 
 		return new TransferAvroState<com.zafin.models.avro1.Alert.Builder, com.zafin.models.avro1.Alert.Builder>(
-				previousObject, newObject) {
+				sourceType, targetType) {
 
 			@Override
-			public com.zafin.models.avro1.Alert.Builder populateAvroBuilder(GenericRecordBuilder genericRecordBuilder,
-					PayLoad payload) throws BuilderServiceException {
-				BuilderPopulator<?, ?> builderPop = getBuilderPopulator(1);
-				Object seededBuilder = builderPop.seed(payload, builderPop.getCurrentBuilder(),
-						builderPop.getPreviousPopulator());
-				return (com.zafin.models.avro1.Alert.Builder) seededBuilder;
+			public com.zafin.models.avro1.Alert.Builder populateAvroBuilder(GenericRecordBuilder genericRecordBuilder) throws BuilderServiceException {
+				PayLoad payLoad = payloadFactory1.create(genericRecordBuilder);
+				return (com.zafin.models.avro1.Alert.Builder) 
+						alertBuilderPopulator1.seed(payLoad);
 			}
 
 			@Override
@@ -152,9 +180,12 @@ public class AlertSpringConfig1 {
 		};
 	}
     
-    @Bean(name="alertBuilderPopulator1")
+    @Bean("alertBuilderPopulator1")
+    //@DependsOn({"transferState1"})
     BuilderPopulator<Alert,Alert.Builder> alertBuilderPopulator1() throws BuilderServiceException {
-    	return new AlertBuilderPopulator1<>();
+    	AlertBuilderPopulator1<Alert,Alert.Builder> abp1 = new AlertBuilderPopulator1<>();
+    	abp1.setTransferState(transferState1());
+    	return abp1;
     }
     
     /**
@@ -213,6 +244,7 @@ public class AlertSpringConfig1 {
     }
     
 	@Bean(name = ALERT_SERVICE)
+	@DependsOn({"transferState1","alertBuilderPopulator1"})
     AlertService1 alertService1() throws BuilderServiceException {
         System.out.println("Spring Creating: " + HttpInvokerServiceExporter.class.getCanonicalName());
         HttpInvokerServiceExporter exporter = new HttpInvokerServiceExporter();
@@ -233,14 +265,13 @@ public class AlertSpringConfig1 {
 				if (!getNativeBuilder().getClass().isAssignableFrom(builder.getClass())) {
 					throw new IllegalArgumentException("Builder argument is not assignable to [" + getNativeBuilder().getClass().getCanonicalName() + "].");
 				}
-				return ((com.zafin.models.avro1.Alert.Builder) builder).build();
+				return ((Alert.Builder) builder).build();
 			}
 			
         };
-        AlertBuilderPopulator1<Alert,Alert.Builder> abp1 = new AlertBuilderPopulator1<Alert,Alert.Builder>();
-        alertService.setBuilderPopulator(new AlertBuilderPopulator1<Alert,Alert.Builder>());
+        alertService.setBuilderPopulator(alertBuilderPopulator1());
+        alertService.setTransferState(transferState1());
         alertService.setBuilder(Alert.newBuilder());
-        abp1.setTransferState(transferState1);
         exporter.setService(alertService);
         exporter.setServiceInterface(AlertService.class);
         return alertService;
@@ -267,7 +298,7 @@ public class AlertSpringConfig1 {
     @Bean
     PayLoadFactory<Alert> payLoadFactory1() throws BuilderServiceException {
         if (config.getProtocolRevision() == 1) {
-            return new AlertPayLoadFactory1<>();
+            return payloadFactory1;
         }
         throw new IllegalStateException(
                 "Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
@@ -291,4 +322,71 @@ public class AlertSpringConfig1 {
         }
     }
     */
+
+	@Override
+	public TransferState<?, ?> getTransferState() throws BuilderServiceException {
+		return transferState1;
+	}
+
+	@Override
+	public BuilderPopulator<?, ?> getAlertBuilderPopulator() throws BuilderServiceException {
+		return alertBuilderPopulator1;
+	}
+
+	@Override
+	public com.zafin.zplatform.proto.Builder<?, ?> getBuilder() throws BuilderServiceException {
+		return alertService1;
+	}
+	
+	@EventListener(ApplicationReadyEvent.class)
+	@Override
+	public void testConfiguration() throws BuilderServiceException {
+		System.out.println("Testing Configuration " + this.getClass().getSimpleName() + "...");
+		List<String> issues = new ArrayList<>();
+		if (transferState1 == null) {
+			issues.add("TransferState1 not intialized.");
+		}
+		if (alertService1 == null) {
+			issues.add("AlertService1 not intialized.");
+		}
+		if (alertBuilderPopulator1 == null) {
+			issues.add("AlertBuilderPopulator1 not intialized.");
+		}
+		if (alertClient1 == null) {
+			issues.add("AlertClient1 not intialized.");
+		}
+		if (getPreviousConfiguration() != null) {
+			issues.add("No previous configuration expected. Found: [" + getPreviousConfiguration().getClass().getCanonicalName() + "].");
+		}
+		validated = issues.isEmpty();
+		if (!validated) {
+			throw new BuilderServiceException(issues.size() + " issues: " + issues);
+		} else {
+			System.out.println("Configuration " + getClass().getSimpleName() + " valid!");
+		}
+		
+	}
+
+	@Override
+	public Client<?, ?> getClient() throws BuilderServiceException {
+		return alertClient1;
+	}
+
+	@Override
+	public VersionedProtocolConfiguration getPreviousConfiguration() {
+		return null;
+	}
+
+	@Override
+	public boolean validated() {
+		return validated;
+	}
+
+	@Override
+	public void setPreviousConfiguration(VersionedProtocolConfiguration versionedProtocolConfiguration)
+			throws BuilderServiceException {
+		if (versionedProtocolConfiguration != null) {
+			throw new BuilderServiceException("This is revision 1, should not be be trying to set previous revision using [" + versionedProtocolConfiguration.getClass().getCanonicalName());
+		}
+	}
 }
