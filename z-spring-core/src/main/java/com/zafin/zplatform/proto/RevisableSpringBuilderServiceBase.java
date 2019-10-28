@@ -2,6 +2,7 @@ package com.zafin.zplatform.proto;
 
 import static com.zafin.zplatform.proto.RevisionUtil.getRevisionFromClassName;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -11,66 +12,66 @@ import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.service.RemoteBuilderService;
 import com.zafin.zplatform.proto.service.RevisableBuilderService;
 
-public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderService<T,B> {
+public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilderService<T,B,O> {
     
     @Autowired
-    private BuilderPopulator<T,B> builderPopulator;
+    private BuilderPopulator<T,B,O> builderPopulator;
 
-    private RevisableBuilderService<T,B> previousCompatibleBuilderService;
+    private RevisableBuilderService<T,B,O> previousCompatibleBuilderService;
     
     @Override
-    public boolean isSubRevision(int revision) {
+    public boolean isSubRevision(int revision) throws BuilderServiceException {
         return revision >= getStartingCompatibleRevision() && 
                 revision <= getEndingCompatibleRevision();
     }
 
     @Override
-    public int getStartingCompatibleRevision() {
+    public int getStartingCompatibleRevision() throws BuilderServiceException {
         return getRevisionFromClassName(getClass().getSimpleName());
     }
 
     @Override
-    public int getEndingCompatibleRevision() {
+    public int getEndingCompatibleRevision() throws BuilderServiceException {
         return getRevisionFromClassName(getClass().getSimpleName());
     }
 
     @Override
-    public RevisableBuilderService<T,B> routeTo(Map<String, Object> props) {
+    public RevisableBuilderService<T,B,O> routeTo(Map<String, Object> props) {
         return null;
     }
     
-    public RevisableBuilderService<T, B> getPreviousCompatibleService() {
+    public RevisableBuilderService<T, B,O> getPreviousCompatibleService() {
         return previousCompatibleBuilderService;
     }
 
-    public void setPreviousCompatibleService(RevisableBuilderService<T, B> previousCompatibleBuilderService) {
+    public void setPreviousCompatibleService(RevisableBuilderService<T,B,O> previousCompatibleBuilderService) {
         this.previousCompatibleBuilderService = previousCompatibleBuilderService;
     }
 
     @Override
-    public BuilderPopulator<T, B> getBuilderPopulator() {
+    public BuilderPopulator<T,B,O> getBuilderPopulator() {
         return builderPopulator;
     }
 
 	@Override
-	public int getRevision() {
+	public int getRevision() throws BuilderServiceException {
 		return RevisionUtil.getRevisionFromClassName(getClass().getSimpleName());
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public RemoteBuilderService<T, B> setup(RemoteBuilderService<?, ?> remoteBuilderService) {
-		return (RemoteBuilderService<T, B>) remoteBuilderService.setup(remoteBuilderService);
+	public RemoteBuilderService<T,B,O> setup(RemoteBuilderService<?,?,?> remoteBuilderService) {
+		return (RemoteBuilderService<T,B,O>) remoteBuilderService.setup(remoteBuilderService);
 	}
 
 	@Override
-	public void setPreviousPopulator(BuilderPopulator<?, ?> previous) {
+	public void setPreviousPopulator(BuilderPopulator<?,?,?> previous) throws BuilderServiceException {
 		builderPopulator.setPreviousPopulator(previous);
 		
 	}
 
 	@Override
-	public BuilderPopulator<?, ?> getPreviousPopulator() {
+	public BuilderPopulator<?,?,?> getPreviousPopulator() {
 		return previousCompatibleBuilderService;
 	}
 
@@ -85,12 +86,12 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 	}
 
 	@Override
-	public TransferState<?, ?> getTransferState() {
+	public TransferState<O,B> getTransferState() {
 		return builderPopulator.getTransferState();
 	}
 
 	@Override
-	public PayLoad loadTestPayLoad(PayLoad payload) {
+	public PayLoad loadTestPayLoad(PayLoad payload) throws BuilderServiceException {
 		return builderPopulator.loadTestPayLoad(payload);
 	}
 
@@ -131,10 +132,13 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 
 	@Override
 	public List<?> seedOldBuilderFirst(PayLoad payload) throws BuilderServiceException {
-		return null;
+		List<Object> seededBuilders = new ArrayList<>();
+		if (previousCompatibleBuilderService != null) {
+			seededBuilders.addAll(previousCompatibleBuilderService.seedOldBuilderFirst(payload));
+		}
+		return seededBuilders;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public B seed(PayLoad payload)
 			throws BuilderServiceException {
@@ -142,8 +146,13 @@ public class RevisableSpringBuilderServiceBase<T,B> implements RevisableBuilderS
 	}
 	
 	@Override
-	public void setTransferState(TransferState<?,?> transferState) {
+	public void setTransferState(TransferState<O,B> transferState) throws BuilderServiceException {
 		builderPopulator.setTransferState(transferState);
+	}
+
+	@Override
+	public B transferState(PayLoad payLoad) throws BuilderServiceException {
+		return builderPopulator.transferState(payLoad);
 	}
     
 }

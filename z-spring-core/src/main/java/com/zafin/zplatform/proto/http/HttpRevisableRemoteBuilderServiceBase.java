@@ -10,7 +10,7 @@ import com.zafin.zplatform.proto.RevisableSpringBuilderServiceBase;
  * @param <T> type of record
  * @param <B> type of builder used to create record
  */
-public class HttpRevisableRemoteBuilderServiceBase<T, B> extends RevisableSpringBuilderServiceBase<T, B> {
+public class HttpRevisableRemoteBuilderServiceBase<T,B,O> extends RevisableSpringBuilderServiceBase<T,B,O> {
 
 
 }

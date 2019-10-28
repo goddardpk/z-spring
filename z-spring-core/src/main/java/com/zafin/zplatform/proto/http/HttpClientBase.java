@@ -13,10 +13,10 @@ import com.zafin.zplatform.proto.ClientBase;
  * @param <T>
  * @param <B>
  */
-public abstract class HttpClientBase<T,B> extends ClientBase<T, B> {
+public abstract class HttpClientBase<T,B,O> extends ClientBase<T,B,O> {
     
-    public HttpClientBase(Class<T> typeOfObject, Class<B> typeOfBuilder) {
-		super(typeOfObject, typeOfBuilder);
+    public HttpClientBase(Class<T> typeOfObject, Class<B> typeOfCurrentBuilder, Class<O> typeOfPreviousBuilder) {
+		super(typeOfObject, typeOfCurrentBuilder,typeOfPreviousBuilder);
 		// TODO Auto-generated constructor stub
 	}
 

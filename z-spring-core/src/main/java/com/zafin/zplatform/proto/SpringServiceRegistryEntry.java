@@ -2,13 +2,14 @@ package com.zafin.zplatform.proto;
 
 import org.springframework.context.ApplicationContext;
 
+import com.zafin.zplatform.proto.exception.BuilderServiceException;
 import com.zafin.zplatform.proto.service.StartupArgs;
 
-public class SpringServiceRegistryEntry<T,B> implements ServiceRegistry<T, B> {
+public class SpringServiceRegistryEntry<T,B,O> implements ServiceRegistry<T,B,O> {
     
     private final RegistryKey<T,B> registryKey;
     
-    private SpringServiceRegistryEntry(Builder<T,B> builder) {
+    private SpringServiceRegistryEntry(Builder<T,B,O> builder) throws BuilderServiceException {
        this.registryKey = new RegistryKey<T,B>(builder.getSpringConfigClass(),
                builder.getSpringApplicationClass(),
                builder.getRevision(),
@@ -136,15 +137,15 @@ public class SpringServiceRegistryEntry<T,B> implements ServiceRegistry<T, B> {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Client<T,B> getBean(String name) {
-        Client<T,B> client = null;
+    public Client<T,B,O> getBean(String name) {
+        Client<T,B,O> client = null;
         ApplicationContext context = registryKey.getContext();
         if (context == null) {
             throw new IllegalStateException("No context registered for revision [" + registryKey.getRevision() + "]");
         } else {
             System.out.println("Context found with registry key: " + registryKey);
         }
-        client = (Client<T,B>) context.getBean(name, Client.class);
+        client = (Client<T,B,O>) context.getBean(name, Client.class);
         if (client == null) {
             throw new IllegalStateException("No Spring bean with name: [" + name + "] configured for config with revision [" + registryKey.getRevision() + "]. RegistryKey used: " + registryKey);
         }
@@ -156,38 +157,38 @@ public class SpringServiceRegistryEntry<T,B> implements ServiceRegistry<T, B> {
         return new Builder<>();
     }
     
-    public static class Builder<T,B> {
+    public static class Builder<T,B,O> {
         private String springConfigClass;
         private StartupArgs args;
         private String springApplicationClass;
         
-        public int getPort() {
+        public int getPort() throws BuilderServiceException {
             return 8080 + getRevision();
         }
        
-        private int getRevision() {
+        private int getRevision() throws BuilderServiceException {
             return RevisionUtil.getRevisionFromClassName(springConfigClass);
         }
-        public Builder<T,B> setSpringConfig(String springConfig) {
+        public Builder<T,B,O> setSpringConfig(String springConfig) {
             this.springConfigClass = springConfig;
             return this;
         }
        
-        public Builder<T,B> setArgs(StartupArgs args) {
+        public Builder<T,B,O> setArgs(StartupArgs args) {
             this.args = args;
             return this;
         }
         
-        public Builder<T,B> setSpringApplicationClass(String springApplicationClass) {
+        public Builder<T,B,O> setSpringApplicationClass(String springApplicationClass) {
             this.springApplicationClass = springApplicationClass;
             return this;
         }
         
-        public SpringServiceRegistryEntry<T,B> build() {
+        public SpringServiceRegistryEntry<T,B,O> build() throws BuilderServiceException {
             if (springConfigClass == null) {
                 throw new IllegalStateException("SpringConfig is null.");
             }
-            return new SpringServiceRegistryEntry<>(this);
+            return new SpringServiceRegistryEntry<T,B,O>(this);
         }
 
         public String getSpringConfigClass() {
