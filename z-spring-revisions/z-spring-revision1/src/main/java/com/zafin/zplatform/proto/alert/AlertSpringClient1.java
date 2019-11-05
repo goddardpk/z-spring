@@ -1,7 +1,6 @@
 package com.zafin.zplatform.proto.alert;
 
 
-import static com.zafin.zplatform.proto.alert.AlertSpringConfig1.ALERT_SERVICE;
 import static com.zafin.zplatform.proto.alert.AlertSpringConfig1.TEST_PAYLOAD;
 
 import java.util.ArrayList;
@@ -13,7 +12,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import com.zafin.models.avro1.Alert;
-import com.zafin.models.avro1.Alert.Builder;
 import com.zafin.zplatform.proto.BuilderPopulator;
 import com.zafin.zplatform.proto.Client;
 import com.zafin.zplatform.proto.ClientBase;
@@ -30,23 +28,16 @@ import com.zafin.zplatform.proto.exception.BuilderServiceException;
  * @param <B> Builder that will produce type <T>
  */
 //@SpringBootApplication
-public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Builder> {
+public class AlertSpringClient1<T,B,O> extends ClientBase<T,B,O> {
     
-
+	@SuppressWarnings("unchecked")
     public AlertSpringClient1() throws BuilderServiceException {
-    	super(Alert.class,Alert.Builder.class,Alert.Builder.class);
-//    	PayLoad payload = new AlertTestPayLoad1<Alert>();
-//    	if (!payload.loadTestData()) {
-//    		throw new BuilderServiceException("Unable to load Test Data");
-//    	}
-//    	if (!addTestPayLoad(payload)) {
-//    		throw new BuilderServiceException("Unable to add test payload data.");
-//    	}
+    	super((Class<B>)Alert.Builder.class);
         System.out.println("Creating[" + getClass().getSimpleName() + "]...");
     }
     
     @Autowired
-    @Qualifier(ALERT_SERVICE)
+    @Qualifier(AlertSpringConfig1.ALERT_SERVICE)
     private AlertService1 alertService1;
     
     @Autowired
@@ -69,15 +60,17 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
 		Client<Alert,Alert.Builder,Alert.Builder> client = (Client<Alert,Alert.Builder,Alert.Builder>) context.getBean("alertClient1");
         client.test();
     }
+    
+    @SuppressWarnings("unchecked")
     @Override
-    public Alert create(PayLoad payload) throws BuilderServiceException {
+    public T create(PayLoad payload) throws BuilderServiceException {
     	if (payload == null) throw new BuilderServiceException("Null payload.");
         List<?> builders =  alertService1.seedOldBuilderFirst(payload);
         List<Object> buildResults = new ArrayList<>();
         for(Object builder:builders) {
         	buildResults.add(alertService1.build(builder));
         }
-        return (Alert) buildResults.get(buildResults.size()-1);
+        return (T) buildResults.get(buildResults.size()-1);
     }
 
     @Override
@@ -85,14 +78,17 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
         return AlertSpringClient1.class;
     }
 
+    @SuppressWarnings("unchecked")
 	@Override
-	public Alert create(Builder builder) {
-		return builder.build();
+	public T create(B builder) {
+		Alert.Builder nativeBuilder = (Alert.Builder) builder;
+		return (T) nativeBuilder.build();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public VersionedProtocolConfiguration getVersionedProtocolConfiguration() throws BuilderServiceException {
-		return AlertSpringConfig1.instance();
+	public VersionedProtocolConfiguration<T,B,O> getVersionedProtocolConfiguration() throws BuilderServiceException {
+		return (VersionedProtocolConfiguration<T,B,O>)AlertSpringConfig1.instance();
 	}
 
 	@Override
@@ -101,14 +97,14 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
 	}
 
 	/**
-	 * Since a client is a loose extension of a 'builder'...
-	 * The only state a client service has is test payload(s) so making this stateless call: client.build() 
-	 * is really just a sanity test that a client can actually build an instance of its supported type without
+	 * Client is an extension of a 'builder'...
+	 * A client service can have test payload(s), so making this stateless call: client.build() 
+	 * is an easy calling mechanism to test on a service mesh environment to validate that a client can actually request a build of a supported type without
 	 * throwing a builder service exception.
 	 */
 	@Override
-	public Alert build() throws BuilderServiceException {
-		Object lastAlert = null;
+	public T build() throws BuilderServiceException {
+		T lastAlert = null;
 		try {
 			System.out.println("Performing a test build using a test payloads...");
 			for (PayLoad payload:this.getTestPayLoads()) {
@@ -120,7 +116,7 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
 		} catch (BuilderServiceException e) {
 			throw new IllegalStateException("Unable to build using a test payload",e);
 		}
-		return (Alert) lastAlert;//Should be able to cast to current Alert type
+		return lastAlert;//Should be able to cast to current Alert type
 	}
 
 	/**
@@ -128,20 +124,21 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
 	 * This builder is not be used other than for testing purposes.
 	 * This insures the underlying framework is capable of producing its builder instance.
 	 */
-	@Override
-	public Builder getNativeBuilder() {
-		return Alert.newBuilder();
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
-	public BuilderPopulator<Alert, Builder, Builder> getBuilderPopulator() {
+	public B getNativeBuilder() {
+		return (B)Alert.newBuilder();
+	}
+
+	@Override
+	public BuilderPopulator<T, B, O> getBuilderPopulator() {
 		try {
-			return (BuilderPopulator<Alert, Builder, Builder>) getVersionedProtocolConfiguration().getAlertBuilderPopulator();
+			return (BuilderPopulator<T, B, O>) getVersionedProtocolConfiguration().getAlertBuilderPopulator();
 		} catch (BuilderServiceException e) {
 			throw new IllegalStateException("Unable to get alert builder populator from configuration",e);
 		}
 	}
+	
 	@Override
 	public boolean loadTestPayLoad() throws BuilderServiceException {
 		if (testPayLoad1 == null) {
@@ -149,17 +146,28 @@ public class AlertSpringClient1 extends ClientBase<Alert,Alert.Builder,Alert.Bui
 		}
 		return testPayLoad1.loadTestData();
 	}
+	
+	@SuppressWarnings("unchecked")
 	@Override
-	public Class<Alert> getClassToBuild() {
-		return Alert.class;
+	public Class<T> getClassToBuild() {
+		return (Class<T>)Alert.class;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public Class<B> getCurrentBuilderClass() {
+		return (Class<B>)Alert.Builder.class;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public Class<O> getPreviousBuilderClass() {
+		return (Class<O>)Alert.Builder.class;
 	}
 	@Override
-	public Class<Builder> getCurrentBuilderClass() {
-		return Alert.Builder.class;
-	}
-	@Override
-	public Class<Builder> getPreviousBuilderClass() {
-		return Alert.Builder.class;
+	public int getRevision() throws BuilderServiceException {
+		if (alertService1 == null) return -1;
+		return alertService1.getRevision();
 	}
 
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecordBuilder;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -45,7 +44,7 @@ import com.zafin.zplatform.proto.service.StartupArgs;
 @Configuration
 @ComponentScan
 @EnableAutoConfiguration
-public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
+public class AlertSpringConfig2<T,B,O> implements VersionedProtocolConfiguration<T,B,O> {
     
     private final Map<Object,ServiceRegistry<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder>> allRegisteredServices = new HashMap<>();
     
@@ -58,14 +57,14 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     
     public static ApplicationContext context;
     
-    private static VersionedProtocolConfiguration INSTANCE;
-    private static VersionedProtocolConfiguration previousConfiguration;
+    private static VersionedProtocolConfiguration<com.zafin.models.avro2.Alert, com.zafin.models.avro2.Alert.Builder, com.zafin.models.avro1.Alert.Builder> INSTANCE;
+    private static VersionedProtocolConfiguration <?,com.zafin.models.avro1.Alert.Builder,?> previousConfiguration;
     
     private boolean validPreviousConfigurationRequired = true;;
     
     private boolean validated = false;
     
-    public static VersionedProtocolConfiguration instance() throws BuilderServiceException {
+    public static VersionedProtocolConfiguration<com.zafin.models.avro2.Alert, com.zafin.models.avro2.Alert.Builder, com.zafin.models.avro1.Alert.Builder> instance() throws BuilderServiceException {
     	if (INSTANCE == null) throw new BuilderServiceException("Instance not created.");
     	return INSTANCE;
     }
@@ -76,23 +75,28 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     
     @Autowired
     @Qualifier("alertBuilderPopulator2")
-    private BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> alertBuilderPopulator2;
+    private BuilderPopulator<T,B,O> alertBuilderPopulator2;
     
     @Autowired
     @Qualifier("transferState2")
-    private TransferState<com.zafin.models.avro1.Alert.Builder,com.zafin.models.avro2.Alert.Builder> transferState2;
+    private TransferState<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder> transferState2;
     
     @Autowired
     @Qualifier(ALERT_SERVICE)
-    private com.zafin.zplatform.proto.Builder<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> alertService2;
+    private com.zafin.zplatform.proto.Builder<T,B,O> alertService2;
+    
+    @Autowired 
+    @Qualifier("alertClient1")
+    private Client<?,?,?> alertClient1;
     
     @Autowired 
     @Qualifier("alertClient2")
-    private Client<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> alertClient2;
+    private Client<T,B,O> alertClient2;
     
-    public AlertSpringConfig2() {
+    @SuppressWarnings("unchecked")
+	public AlertSpringConfig2() {
         System.out.println("Starting [" + this.getClass().getCanonicalName() + "]...");
-        INSTANCE = this;
+        INSTANCE = (VersionedProtocolConfiguration<Alert, Builder, com.zafin.models.avro1.Alert.Builder>) this;
     }
     
     public static ApplicationContext getContext(int revision) throws BuilderServiceException {
@@ -108,15 +112,17 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     	throw new IllegalArgumentException("Unsupported revision: [" + revision + "].");
     }
     
-    BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> getBuilderPopulator(int revision) throws BuilderServiceException {
+    @SuppressWarnings("unchecked")
+	BuilderPopulator<?,?,?> getBuilderPopulator(int revision) throws BuilderServiceException {
     	String beanName = "alertBuilderPopulator" + revision;
-    	BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> populator = (BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder>) getContext(revision).getBean(beanName);
+		BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> populator = (BuilderPopulator<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder>) getContext(revision).getBean(beanName);
     	if (populator == null) {
     		throw new IllegalStateException("No bean defined as: [" + beanName + "].");
     	}
-    	--revision;
     	if (revision >= 1) {
-    		populator.setPreviousPopulator(getBuilderPopulator(revision));
+    		BuilderPopulator<?,com.zafin.models.avro1.Alert.Builder,?> previousPopulator = 
+    				(BuilderPopulator<?, com.zafin.models.avro1.Alert.Builder, ?>) getBuilderPopulator(--revision);
+    		populator.setPreviousPopulator(previousPopulator);
     	}
     	return populator;
     }
@@ -132,22 +138,18 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     AlertBuilderPopulator2<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> alertBuilderPopulator2() throws BuilderServiceException {
     	AlertBuilderPopulator2<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> abp2 =  new AlertBuilderPopulator2<>();
     	abp2.setTransferState(transferState2());
-    	abp2.setCurrentBuilder(Alert.newBuilder());
     	return abp2;
     }
     
     @Bean(name="transferState2") 
     @DependsOn({"payloadFactory2"})
-    TransferState<com.zafin.models.avro1.Alert.Builder,com.zafin.models.avro2.Alert.Builder> transferState2() throws BuilderServiceException {
-    	Class<com.zafin.models.avro1.Alert.Builder> previousObject = com.zafin.models.avro1.Alert.Builder.class;
-		Class<com.zafin.models.avro2.Alert.Builder> newObject = com.zafin.models.avro2.Alert.Builder.class;
-    	return new TransferAvroState<com.zafin.models.avro1.Alert.Builder,com.zafin.models.avro2.Alert.Builder>(previousObject,newObject) {
-
-			@Override
-			public Builder populateAvroBuilder(GenericRecordBuilder genericRecordBuilder) throws BuilderServiceException {
-				PayLoad payLoad = payloadFactory2.create(genericRecordBuilder);
-				return (com.zafin.models.avro2.Alert.Builder) alertBuilderPopulator2.seed(payLoad);
-			}
+    TransferState<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder> transferState2() throws BuilderServiceException {
+    	
+    	Class<com.zafin.models.avro2.Alert> currentClassToBuild = com.zafin.models.avro2.Alert.class;
+		Class<com.zafin.models.avro2.Alert.Builder> currentBuilderClass = com.zafin.models.avro2.Alert.Builder.class;
+		Class<com.zafin.models.avro1.Alert.Builder> previousBuilderClass = com.zafin.models.avro1.Alert.Builder.class; 
+		TransferAvroState<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder>  ts = 
+				new TransferAvroState<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder>(currentClassToBuild,currentBuilderClass,previousBuilderClass,getRevision()) {
 
 			@Override
 			public Schema getPreviousSchema() {
@@ -159,11 +161,9 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 				return com.zafin.models.avro2.Alert.getClassSchema();
 			}
 
-			@Override
-			public Builder convert(com.zafin.models.avro1.Alert.Builder arg0) {
-				throw new IllegalStateException("No implemented yet");
-			}
     	};
+    	//ts.setPreviousTransferState(alertBuilderPopulator2.getPreviousPopulator().getTransferState());
+    	return ts;
     }
     
     @Component
@@ -263,12 +263,17 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     }
     
     @Bean(name="alertClient2")
-    Client<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> alertClient2() throws BuilderServiceException {
+    Client<com.zafin.models.avro2.Alert, com.zafin.models.avro2.Alert.Builder, com.zafin.models.avro1.Alert.Builder> alertClient2() throws BuilderServiceException {
         System.out.println("Configuration revision is [" + config.getProtocolRevision() + "].");
-        AlertSpringClient2 client = null;
+        AlertSpringClient2<com.zafin.models.avro2.Alert, com.zafin.models.avro2.Alert.Builder, com.zafin.models.avro1.Alert.Builder> client = null;
         if (config.getProtocolRevision() == 2) {
-        	client =  new AlertSpringClient2();
-        	client.addTestPayLoad(testPayLoad2());
+        	client =  new AlertSpringClient2<com.zafin.models.avro2.Alert, com.zafin.models.avro2.Alert.Builder, com.zafin.models.avro1.Alert.Builder>();
+        	client.setPreviousBuilder(alertClient1);
+        	for (PayLoad prev: alertClient1.getTestPayLoads()) {
+        		PayLoad payload2 = testPayLoad2();
+        		payload2.setPreviousPayLoad(prev);
+        		client.addTestPayLoad(payload2);
+        	}
         } else {
         	throw new BuilderServiceException("Configuration protocol revision [" + config.getProtocolRevision() + "] is unsupported.");
         }
@@ -277,7 +282,7 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     
     @Bean(TEST_PAYLOAD)
     PayLoad testPayLoad2() throws BuilderServiceException {
-    	return new AlertTestPayLoad1<com.zafin.models.avro1.Alert>();
+    	return new AlertTestPayLoad2<com.zafin.models.avro2.Alert>();
     }
     
 	@Bean
@@ -294,17 +299,17 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
     }
 
 	@Override
-	public TransferState<com.zafin.models.avro1.Alert.Builder,com.zafin.models.avro2.Alert.Builder> getTransferState() throws BuilderServiceException {
+	public TransferState<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder> getTransferState() throws BuilderServiceException {
 		return transferState2;
 	}
 
 	@Override
-	public BuilderPopulator<Alert,Alert.Builder, com.zafin.models.avro1.Alert.Builder> getAlertBuilderPopulator() throws BuilderServiceException {
+	public BuilderPopulator<T,B,O> getAlertBuilderPopulator() throws BuilderServiceException {
 		return alertBuilderPopulator2;
 	}
 
 	@Override
-	public com.zafin.zplatform.proto.Builder<com.zafin.models.avro2.Alert,com.zafin.models.avro2.Alert.Builder,com.zafin.models.avro1.Alert.Builder> getBuilder() throws BuilderServiceException {
+	public com.zafin.zplatform.proto.Builder<T,B,O> getBuilder() throws BuilderServiceException {
 		return alertService2;
 	}
 	
@@ -322,6 +327,7 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 	 * This responsibility of backward chaining should be moved out to some some higher protocol requirement.
 	 * Basically: A revised configuration shall always be able to reference a valid previous configuration.
 	 */
+	@SuppressWarnings("unchecked")
 	@EventListener(ApplicationReadyEvent.class)
 	@Override
 	public void testConfiguration() throws BuilderServiceException {
@@ -332,35 +338,37 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 		
 		List<String> issues = new ArrayList<>();
 		if (previousConfiguration == null) {
-			issues.add("PreviousConfiguration not set.");
+			issues.add("Spring Env not valid: PreviousConfiguration not set.");
 		}
 		
 		if (transferState2 == null) {
-			issues.add("TranfserState2 not initialized.");
+			issues.add("Spring Env not valid: TranfserState2 not initialized.");
 		}
 		if (alertService2 == null) {
-			issues.add("AlertService2 not initialized.");
+			issues.add("Spring Env not valid: AlertService2 not initialized.");
 		}
 		if (alertBuilderPopulator2 == null) {
-			issues.add("AlertBuilderPopulator2 not initialized.");
+			issues.add("Spring Env not valid: AlertBuilderPopulator2 not initialized.");
 		}
 		if (alertClient2 == null) {
-			issues.add("AlertClient2 not initialized.");
+			issues.add("Spring Env not valid: AlertClient2 not initialized.");
 		}
 		if (validPreviousConfigurationRequired && getPreviousConfiguration() == null) {
-			issues.add("Previous valid configuration required");
+			issues.add("Spring Env not valid: Previous valid configuration required");
 		}
 		if (alertClient2.getPreviousBuilder() == null) {
 			alertClient2.setPreviousBuilder(previousConfiguration.getBuilder());
 			if (alertClient2.getPreviousBuilder() == null) {
-				issues.add("AlertClient2 intialized but missing previous client");
+				issues.add("Spring Env not valid: AlertClient2 intialized but missing previous client");
 			}
 		}
 		if (alertBuilderPopulator2.getPreviousPopulator() == null) {
 			System.out.println("Attempting to wire previous alert builder populator...");
-			alertBuilderPopulator2.setPreviousPopulator(previousConfiguration.getAlertBuilderPopulator());
+			BuilderPopulator<?,?,?> previousPopulator = 
+					 previousConfiguration.getAlertBuilderPopulator();
+			alertBuilderPopulator2.setPreviousPopulator((BuilderPopulator<?, O, ?>) previousPopulator);
 			if (alertBuilderPopulator2.getPreviousPopulator() == null) {
-				issues.add("AlertBuilderPopulator2 is initialized but missing previous populator.");
+				issues.add("Spring Env not valid: AlertBuilderPopulator2 is initialized but missing previous populator.");
 			}
 		}
 		validated = issues.isEmpty();
@@ -372,14 +380,14 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 	}
 
 	@Override
-	public Client<Alert,Alert.Builder,com.zafin.models.avro1.Alert.Builder> getClient() throws BuilderServiceException {
-		
+	public Client<T, B, O> getClient() throws BuilderServiceException {
 		return this.alertClient2;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public VersionedProtocolConfiguration getPreviousConfiguration() {
-		return previousConfiguration;
+	public VersionedProtocolConfiguration<?,O,?> getPreviousConfiguration() {
+		return (VersionedProtocolConfiguration<?, O, ?>) previousConfiguration;
 	}
 
 	@Override
@@ -387,8 +395,9 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 		return validated;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void setPreviousConfiguration(VersionedProtocolConfiguration versionedProtocolConfiguration)
+	public void setPreviousConfiguration(VersionedProtocolConfiguration<?,O,?> versionedProtocolConfiguration)
 			throws BuilderServiceException {
 		//Protect setter from nulls by ignoring calls if previous config already set.
 		if (previousConfiguration != null && versionedProtocolConfiguration != null) {
@@ -397,7 +406,12 @@ public class AlertSpringConfig2 implements VersionedProtocolConfiguration {
 		if (versionedProtocolConfiguration == null && previousConfiguration == null) {
 			throw new BuilderServiceException("Previous Configuration arg is null: Configuration [" + AlertSpringConfig2.class.getSimpleName() + " requires previous configuration");
 		}
-		previousConfiguration = versionedProtocolConfiguration;
+		previousConfiguration = (VersionedProtocolConfiguration<?, com.zafin.models.avro1.Alert.Builder, ?>) versionedProtocolConfiguration;
 		
+	}
+
+	@Override
+	public int getRevision() {
+		return 2;
 	}
 }

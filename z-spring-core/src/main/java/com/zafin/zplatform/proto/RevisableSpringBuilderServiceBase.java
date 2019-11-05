@@ -17,7 +17,7 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
     @Autowired
     private BuilderPopulator<T,B,O> builderPopulator;
 
-    private RevisableBuilderService<T,B,O> previousCompatibleBuilderService;
+    private RevisableBuilderService<?,O,?> previousCompatibleBuilderService;
     
     @Override
     public boolean isSubRevision(int revision) throws BuilderServiceException {
@@ -40,11 +40,11 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
         return null;
     }
     
-    public RevisableBuilderService<T, B,O> getPreviousCompatibleService() {
+    public RevisableBuilderService<?,O,?> getPreviousCompatibleService() {
         return previousCompatibleBuilderService;
     }
 
-    public void setPreviousCompatibleService(RevisableBuilderService<T,B,O> previousCompatibleBuilderService) {
+    public void setPreviousCompatibleService(RevisableBuilderService<?,O,?> previousCompatibleBuilderService) {
         this.previousCompatibleBuilderService = previousCompatibleBuilderService;
     }
 
@@ -65,13 +65,13 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
 	}
 
 	@Override
-	public void setPreviousPopulator(BuilderPopulator<?,?,?> previous) throws BuilderServiceException {
+	public void setPreviousPopulator(BuilderPopulator<?,O,?> previous) throws BuilderServiceException {
 		builderPopulator.setPreviousPopulator(previous);
 		
 	}
 
 	@Override
-	public BuilderPopulator<?,?,?> getPreviousPopulator() {
+	public BuilderPopulator<?,O,?> getPreviousPopulator() {
 		return previousCompatibleBuilderService;
 	}
 
@@ -81,12 +81,12 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
 	}
 
 	@Override
-	public void setCurrentBuilder(B builder) {
+	public void setCurrentBuilder(B builder) throws BuilderServiceException {
 		builderPopulator.setCurrentBuilder(builder);
 	}
 
 	@Override
-	public TransferState<O,B> getTransferState() {
+	public TransferState<T,B,O> getTransferState() {
 		return builderPopulator.getTransferState();
 	}
 
@@ -98,11 +98,6 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
 	@Override
 	public T build(Object builder) throws BuilderServiceException {
 		throw new IllegalStateException("Not implemented");
-	}
-
-	@Override
-	public boolean transferStateForward(PayLoad payload) throws BuilderServiceException {
-		return builderPopulator.transferStateForward(payload);
 	}
 
 	@Override
@@ -140,19 +135,45 @@ public class RevisableSpringBuilderServiceBase<T,B,O> implements RevisableBuilde
 	}
 
 	@Override
-	public B seed(PayLoad payload)
+	public B seed(Object payload)
 			throws BuilderServiceException {
 		return (B) builderPopulator.seed(payload);
 	}
 	
 	@Override
-	public void setTransferState(TransferState<O,B> transferState) throws BuilderServiceException {
+	public void setTransferState(TransferState<T,B,O> transferState) throws BuilderServiceException {
 		builderPopulator.setTransferState(transferState);
 	}
 
 	@Override
-	public B transferState(PayLoad payLoad) throws BuilderServiceException {
-		return builderPopulator.transferState(payLoad);
+	public boolean isInitialRevision() throws BuilderServiceException {
+		return builderPopulator.isInitialRevision();
 	}
-    
+
+	@Override
+	public BuilderPopulator<?, ?, B> getNextPopulator() {
+		return builderPopulator.getNextPopulator();
+	}
+
+	@Override
+	public void setNextPopulator(BuilderPopulator<?, ?, B> nextPopulator) throws BuilderServiceException {
+		builderPopulator.setNextPopulator(nextPopulator);
+	}
+
+	@Override
+	public Object getValue(Object objectKey, Object map) throws BuilderServiceException {
+		return builderPopulator.getValue(objectKey, map);
+	}
+
+	@Override
+	public B set(Object objectKey, Object value, B newBuilder) throws BuilderServiceException {
+		return builderPopulator.set(objectKey, value, newBuilder);
+	}
+
+
+	@Override
+	public boolean isReady() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

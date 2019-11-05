@@ -14,8 +14,8 @@ public abstract class AlertHttpClientSpringBase<T,B,O>
     private int getAdjustedPort() throws BuilderServiceException {
         return BASE_PORT + getRevision();
     }
-    
-    private int getRevision() throws BuilderServiceException {
+    @Override
+    public int getRevision() throws BuilderServiceException {
         return RevisionUtil.getRevisionFromClassName(this.getClass().getSimpleName());
     }
     
@@ -29,8 +29,8 @@ public abstract class AlertHttpClientSpringBase<T,B,O>
         return DEFAULT_LOCAL_URL;
     }
     
-    public AlertHttpClientSpringBase(Class<?> interfaceClazz, String url,Class<T> classOfObject, Class<B> classOfBuilder,Class<O> classOfPreviousBuilder) throws BuilderServiceException {
-    	super(classOfObject,classOfBuilder,classOfPreviousBuilder);
+    public AlertHttpClientSpringBase(Class<?> interfaceClazz, String url,Class<B> classOfBuilder) throws BuilderServiceException {
+    	super(classOfBuilder);
     	LOCAL_URL = "http://localhost:" + getAdjustedPort() + "/";
     	DEFAULT_LOCAL_URL = LOCAL_URL + AlertService.class.getSimpleName();
         if (interfaceClazz == null) {
